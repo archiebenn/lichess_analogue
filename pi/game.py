@@ -45,11 +45,11 @@ def is_my_turn(moves, my_colour):
     whites_turn_next = move_count %2 == 0
 
     if my_colour == 'white':
-        # opponent's turn next = false when white's turn next = true and I am white
+        # if I am white and white's turn next = true, is_my_turn = true
         return whites_turn_next
     
     else:
-        # opponent's turn next = true when white's turn next = true and I am not white
+        # if I am black and white's turn next = true, is_my_turn = false
         return not whites_turn_next
     
 
@@ -80,12 +80,13 @@ def start_game(client, game_id, my_colour):
 
                 # my turn
                 if is_my_turn(moves, my_colour):
-
-                    print(f"YOUR MOVE: {origin} -> {destination}")
+                    
+                    # print previous move (print opponent's move to CLI during my move)
+                    print(f"OPPONENT'S MOVE: {origin} -> {destination}")
                 
                 else:
-                    # opponent's turn
-                    print(f"OPPONENT'S MOVE: {origin} -> {destination}")
+                    # print my previous move to CLI during opponent's move
+                    print(f"YOU MOVE: {origin} -> {destination}")
 
 
 ###
