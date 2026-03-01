@@ -1,10 +1,15 @@
 # in game functions
 
+###
+# IMPORTS
+###
+import chess
+from serial_comms import LED_instruction
+
 
 ###
 # to_from function
 ###
-
 # take the move string, eg e2e4, and return the origin and destination square names (will change to coordinates later)
 def to_from(move_string):
     """
@@ -52,6 +57,7 @@ def is_my_turn(moves, my_colour):
         return not whites_turn_next
     
 
+
 ###
 # start_game function
 ###
@@ -61,6 +67,7 @@ def start_game(client, game_id, my_colour):
     """
     streams game state for a given game id and updates LEDs accordingly
     """
+    board = chess.Board()
 
     for event in client.board.stream_game_state(game_id):
 
@@ -77,15 +84,23 @@ def start_game(client, game_id, my_colour):
                 # set origin/destination:
                 origin, destination, promotion = to_from(latest_move)
 
+                # update CLI board using latest_move
+                board.push_uci(latest_move)
+                
+                # print CLI chess board
+                print()
+                print(board)
+
                 # my turn
                 if is_my_turn(moves, my_colour):
-                    
-                    # print previous move (print opponent's move to CLI during my move)
-                    print(f"OPPONENT'S MOVE: {origin} -> {destination}")
+
+                    # light up LEDs to show previous (opponent's) move
+                    LED_instruction(origin, destination)
                 
                 else:
-                    # print my previous move to CLI during opponent's move
-                    print(f"YOUR MOVE: {origin} -> {destination}")
+                    # stand in - will be removed too
+                    print(f"(Your move) {origin} -> {destination}")
+                    
 
 
 ###
