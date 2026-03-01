@@ -36,9 +36,8 @@ def is_my_turn(moves, my_colour):
     move_count = 2  -> black just moved ->  white moves next
     """
 
-    # set move count
+    # set current move count
     move_count = len(moves.split()) if moves else 0
-    print(move_count)
 
     # white always moves first, so it is white's turn next if move_count divisible by 2
     # BOOL True/False
