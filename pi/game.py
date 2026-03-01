@@ -28,25 +28,28 @@ def to_from(move_string):
 # whose_turn function - returns which player's turn it is based on game state
 ###
 
-def opponents_turn(moves, my_colour):
+def is_opponents_turn(moves, my_colour):
     """
-    BOOL True/False to determine if it is the opponent's turn or not based on move count and colour of each player.
+    BOOL True/False to determine if it is the opponent's turn or not based on move count and colour of each player. This is for the NEXT move.
+    e.g:
+    move_count = 1  -> white just moved ->  black moves next
+    move_count = 2  -> black just moved ->  white moves next
     """
 
     # set move count
     move_count = len(moves.split()) if moves else 0
 
-    # white always moves first so on go 1, 3, 5 etc. (0 index: 0, 2, 4 etc. ie. even moves)
+    # white always moves first, so it is white's turn next if move_count divisible by 2
     # BOOL True/False
-    whites_turn = move_count %2 == 0
+    whites_turn_next = move_count %2 == 0
 
     if my_colour == 'white':
-        # evaluates to False (ie opponents turn = false, so my turn if white)
-        return not whites_turn
+        # opponent's turn next = false when white's turn next = true and I am white
+        return not whites_turn_next
     
     else:
-        # evaluates to True (oppponent's turn true if they are white)
-        return whites_turn
+        # opponent's turn next = true when white's turn next = true and I am not white
+        return whites_turn_next
     
 
 ###

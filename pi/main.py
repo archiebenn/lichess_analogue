@@ -24,7 +24,7 @@ for event in client.board.stream_incoming_events():
         my_colour = event['game']['color']
 
         print(f"Game starting: {game_id}")
-        start_game(client, game_id)
+        start_game(client, game_id, my_colour)
 
     # if game finishes print to cli and wait for next game 
     elif event['type'] == 'gameFinish':
