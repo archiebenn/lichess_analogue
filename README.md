@@ -1,6 +1,5 @@
 # Lichess LED Board
-Repo for code, set up,and building of a LED-activated physical chess board linked to Lichess for playing online or against a computer on a physical board. 
-
+Repo for code, set up, and building of an Lichess-linked and LED-activated physical chess board to play online or against a computer live with physical pieces.
 
 ## Setup
 ### Pre-filled API token form:  
