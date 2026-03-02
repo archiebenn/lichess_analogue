@@ -67,12 +67,24 @@ def start_game(client, game_id, my_colour):
     """
     streams game state for a given game id and updates LEDs accordingly
     """
+
     board = chess.Board()
+
+    # set statuses indicating if a game has already finished to avoid attempting to process moves during a finished game
+    finished_status = {'resign', 'mate', 'timeout', 'draw', 'stalemate', 'aborted', 'outoftime'}
+
 
     for event in client.board.stream_game_state(game_id):
 
         # UPDATE THIS BLOCK FOR LEDs
         if event['type'] == 'gameState':
+
+            # check if game has finished first before attemtping to process moves
+            if event['status'] in finished_status:
+                print(f"Game {game_id} has finished: {event['status']}")
+
+                # return to main.py to wait for next game
+                return
 
             # print only latest move from streamed game state:
             moves = event['moves']
@@ -80,13 +92,24 @@ def start_game(client, game_id, my_colour):
 
                 # latest move string
                 latest_move = moves.split()[-1]
-                
+
                 # set origin/destination:
                 origin, destination, promotion = to_from(latest_move)
 
-                # update CLI board using latest_move
-                board.push_uci(latest_move)
-                
+                # rebuild board from full move list to ensure correct state
+                board = chess.Board()
+
+                try:
+                    for uci in moves.split():
+                        board.push_uci(uci)
+
+                # don't crash on malformed/unknown moves and skip until next update
+                # if there is an error which is corrected it will print a warning but then update chess.Board() on next move anyway
+                except chess.IllegalMoveError as e:
+
+                    print(f"Warning: illegal move in moves list, skipping: {e}")
+                    continue
+
                 # print CLI chess board
                 print()
                 print(board)
