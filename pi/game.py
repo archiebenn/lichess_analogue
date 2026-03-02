@@ -73,7 +73,8 @@ def start_game(client, game_id, my_colour):
     # set statuses indicating if a game has already finished to avoid attempting to process moves during a finished game
     finished_status = {'resign', 'mate', 'timeout', 'draw', 'stalemate', 'aborted', 'outoftime'}
 
-
+    # this is the main game loop which streams each move in real time and updates LEDs accordingly
+    # continues until game finishes, then returns to main.py for next game
     for event in client.board.stream_game_state(game_id):
 
         # UPDATE THIS BLOCK FOR LEDs
@@ -113,6 +114,9 @@ def start_game(client, game_id, my_colour):
                 # print CLI chess board
                 print()
                 print(board)
+
+                if board.is_check():
+                    print("CHECK!")
 
                 # my turn
                 if is_my_turn(moves, my_colour):
