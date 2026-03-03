@@ -87,7 +87,7 @@ def timer(time_ms, player_label):
         seconds = int(remaining_secs) % 60
 
         # output remaining player time to CLI
-        print(f"\r{player_label}: {minutes:02d}:{intseconds:02d}", end="", flush=True)
+        print(f"\r{player_label}: {minutes:02d}:{seconds:02d}", end="", flush=True)
 
         # print every 0.1s interval
         time.sleep(0.1)
