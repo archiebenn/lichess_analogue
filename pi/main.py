@@ -24,6 +24,8 @@ for event in client.board.stream_incoming_events():
         my_colour = event['game']['color']
 
         print(f"Game starting: {game_id}")
+
+        # move to main game loop function - LEDs, moves, timer etc.
         start_game(client, game_id, my_colour)
 
     # if game finishes print to cli and wait for next game 

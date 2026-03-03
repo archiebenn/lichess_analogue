@@ -5,7 +5,8 @@
 ###
 import chess
 from serial_comms import LED_instruction
-
+import threading
+import time
 
 ###
 # to_from function
@@ -59,16 +60,45 @@ def is_my_turn(moves, my_colour):
 
 
 ###
+# timer function - returns players' remaining times at 0.1s intervals
+###
+def timer(time_ms, player_label):
+    """
+    converts ms to seconds and formats for display
+    """
+    _stop_clock.clear()
+    remaining_secs = time_ms/1000
+
+    # calculate only when time on clock
+    while not _stop_clock.is_set() and remaining_secs > 0:
+        minutes = remaining_secs//60
+        seconds = remaining_secs % 60
+
+        # output remaining player time to CLI
+        print(f"\r{player_label}: {minutes:02d}:{seconds:02d}", end="", flush=True)
+
+        # print every 0.1s interval
+        time.sleep(0.1)
+        remaining_secs -= 0.1
+    print()
+
+
+
+###
 # start_game function
 ###
 # set up start game function that streams game state for a given game id and client
 # any move made in the game will trigger an update to the game state, which is streamed in real time and can be used to update the board/cli/LEDs (eventually)
 def start_game(client, game_id, my_colour):
     """
-    streams game state for a given game id and updates LEDs accordingly
+    streams game state for a given game id and updates LEDs/CLI accordingly
     """
 
     board = chess.Board()
+    
+    # timers 
+    _clock_thread = None
+    _stop_clock = threading.Event()
 
     # set statuses indicating if a game has already finished to avoid attempting to process moves during a finished game
     finished_status = {'resign', 'mate', 'timeout', 'draw', 'stalemate', 'aborted', 'outoftime'}
@@ -77,7 +107,6 @@ def start_game(client, game_id, my_colour):
     # continues until game finishes, then returns to main.py for next game
     for event in client.board.stream_game_state(game_id):
 
-        # UPDATE THIS BLOCK FOR LEDs
         if event['type'] == 'gameState':
 
             # check if game has finished first before attemtping to process moves
@@ -86,9 +115,33 @@ def start_game(client, game_id, my_colour):
 
                 # return to main.py to wait for next game
                 return
-
+            
             # print only latest move from streamed game state:
             moves = event['moves']
+
+            # TIMER STUFF
+            # try and fetch time remaining for each player from event (in ms). get produces None if non-timed game so skips timer()
+            white_time = event.get('wtime')
+            black_time = event.get('btime') 
+
+            # set time for countdown on first move
+            if white_time and black_time:
+
+                # stop any  previous countdown if running
+                if _clock_thread and _clock_thread.is_alive():
+                    _stop_clock.set()
+                    _clock_thread.join()
+
+                # figure out whose clock is ticking 
+                time_ms = white_time if my_colour == 'white' else black_time
+                player_label = "You" if is_my_turn(moves, my_colour) else "Opponent"
+
+                # start the countdown
+                _clock_thread = threading.Thread(target=timer, args=(time_ms, player_label), daemon=True)
+                _clock_thread.start()
+
+
+            # MOVE STUFF
             if moves:
 
                 # latest move string
@@ -118,18 +171,24 @@ def start_game(client, game_id, my_colour):
                 if board.is_check():
                     print("CHECK!")
 
-                # my turn
+                # my turn - light LEDs and set timer counting down
                 if is_my_turn(moves, my_colour):
 
                     # light up LEDs to show previous (opponent's) move
                     LED_instruction(origin, destination)
+
+                    # set variables to pass to timer() for my turn time remaining
+                    time_ms = white_time if my_colour == 'white' else black_time
+                    player_label = "You"
+
                 
                 else:
-                    # stand in - will be removed too
+                    # show previous move
                     print(f"(Your move) {origin} -> {destination}")
+
+                    # set variables to pass to timer() for opponent's time remaining
+                    time_ms = white_time if my_colour != 'white' else black_time
+                    player_label = "Opponent"
+
+            
                     
-
-
-###
-# LED CONTROL LOGIC
-###
