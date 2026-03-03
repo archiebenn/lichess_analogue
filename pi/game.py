@@ -136,7 +136,7 @@ def start_game(client, game_id, my_colour):
                 time_ms = white_time if my_colour == 'white' else black_time
                 player_label = "You" if is_my_turn(moves, my_colour) else "Opponent"
 
-                # start the countdown
+                # run timer() function
                 _clock_thread = threading.Thread(target=timer, args=(time_ms, player_label), daemon=True)
                 _clock_thread.start()
 
