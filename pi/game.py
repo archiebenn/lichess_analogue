@@ -74,20 +74,20 @@ def timer(time_ms, player_label):
     converts ms to seconds and formats for display
     """
     _stop_clock.clear()
-    
+
     # convert timedelta to seconds if needed
     if hasattr(time_ms, 'total_seconds'):
         remaining_secs = time_ms.total_seconds()
     else:
         remaining_secs = time_ms / 1000
 
-    # calculate only when time on clock
+    # calculate only when time on clock and set as integers
     while not _stop_clock.is_set() and remaining_secs > 0:
-        minutes = remaining_secs//60
-        seconds = remaining_secs % 60
+        minutes = int(remaining_secs)//60
+        seconds = int(remaining_secs) % 60
 
         # output remaining player time to CLI
-        print(f"\r{player_label}: {minutes:02d}:{seconds:02d}", end="", flush=True)
+        print(f"\r{player_label}: {minutes:02d}:{intseconds:02d}", end="", flush=True)
 
         # print every 0.1s interval
         time.sleep(0.1)
