@@ -130,30 +130,7 @@ def start_game(client, game_id, my_colour):
             
             # print only latest move from streamed game state:
             moves = event['moves']
-
-            # TIMER STUFF
-            # try and fetch time remaining for each player from event (in ms). get produces None if non-timed game so skips timer()
-            white_time = event.get('wtime')
-            black_time = event.get('btime') 
-
-            # set time for countdown on first move
-            if white_time and black_time:
-
-                # stop any  previous countdown if running
-                if _clock_thread and _clock_thread.is_alive():
-                    _stop_clock.set()
-                    _clock_thread.join()
-
-                # figure out whose clock is ticking 
-                time_ms = white_time if my_colour == 'white' else black_time
-                player_label = "You" if is_my_turn(moves, my_colour) else "Opponent"
-
-                # run timer() function
-                _clock_thread = threading.Thread(target=timer, args=(time_ms, player_label), daemon=True)
-                _clock_thread.start()
-
-
-            # MOVE STUFF
+            # PROCESS MOVE STUFF
             if moves:
 
                 # latest move string
@@ -183,6 +160,12 @@ def start_game(client, game_id, my_colour):
                 if board.is_check():
                     print("CHECK!")
 
+                # fetch the times for each player. 'None' if untimed game
+                white_time = event.get('wtime')
+                black_time = event.get('btime')
+
+
+                # LIGHT STUFF
                 # my turn - light LEDs and set timer counting down
                 if is_my_turn(moves, my_colour):
 
@@ -191,7 +174,7 @@ def start_game(client, game_id, my_colour):
 
                     # set variables to pass to timer() for my turn time remaining
                     time_ms = white_time if my_colour == 'white' else black_time
-                    player_label = "You"
+                    player_label = "Your time remaining"
 
                 
                 else:
@@ -200,7 +183,29 @@ def start_game(client, game_id, my_colour):
 
                     # set variables to pass to timer() for opponent's time remaining
                     time_ms = white_time if my_colour != 'white' else black_time
-                    player_label = "Opponent"
+                    player_label = "Opponent time remaining"
+
+
+                # TIMER STUFF
+                # only start timer on timed games where times != None
+                if white_time and black_time:
+
+                    # stop any  previous countdown if running
+                    if _clock_thread and _clock_thread.is_alive():
+                        _stop_clock.set()
+                        _clock_thread.join()
+
+                    # run timer() function in separate thread to avoid blocking main game loop
+                    _clock_thread = threading.Thread(target=timer, args=(time_ms, player_label), daemon=True)
+                    _clock_thread.start()
+                
+                else:
+
+                    # unlimited time games, stop any running timer if it exists
+                    if _clock_thread and _clock_thread.is_alive():
+                        _stop_clock.set()
+                        _clock_thread.join()
+                        
 
             
                     
