@@ -174,6 +174,41 @@ def start_stop_timer(
     return clock_thread, stop_clock
 
 
+
+###
+# submit my move function - takes input (from cli or hall sensors) and submits to lichess if valid via api. 
+# also exits if new game state arrives
+###
+def submit_my_move(client, game_id, move_handler, event_queue, clock_thread, stop_clock):
+    """
+    Waits for a valid move from the player and submits it to Lichess.
+    Exits early if a new game event arrives (resign, timeout etc.)
+    """
+    while True:
+        my_move = move_handler.get_move(timeout=1)
+
+        if my_move is None:
+            # check if a new game event arrived while waiting
+            try:
+                new_event = event_queue.get_nowait()
+                event_queue.put(new_event)  
+                return 
+            except queue.Empty:
+                continue  
+
+        try:
+            client.board.make_move(game_id, my_move)
+            # move accepted, stop timer
+            if clock_thread and clock_thread.is_alive():
+                stop_clock.set()
+                clock_thread.join()
+            return
+
+        except Exception as e:
+            print(f"Invalid move: {e}. Please try again.")
+
+
+
 ###
 # game loop function
 ###
@@ -186,11 +221,11 @@ def game_loop(client, game_id, my_colour):
 
     board = chess.Board()
 
-    # timers
+    # timers - initialised as None until first move
     _clock_thread = None
     _stop_clock = None
 
-    # move input handler
+    # move input handler - handles CLI input and eventually hall sensor input from arduino
     move_handler = MoveInputHandler()
 
     # set statuses indicating if a game has already finished to avoid attempting to process moves during a finished game
@@ -204,16 +239,22 @@ def game_loop(client, game_id, my_colour):
         "outoftime",
     }
 
+    # queue to hold incoming stream events so they don't block input loop
     event_queue = queue.Queue()
 
+    # runs in separate thread - pushes each streamed event into the queue
     def stream_to_queue():
         for event in client.board.stream_game_state(game_id):
             event_queue.put(event)
 
+    # start stream thread
     threading.Thread(target=stream_to_queue, daemon=True).start()
 
-    # this is the main game loop which streams each move in real time and updates LEDs accordingly
+    # main game loop - processes events from the queue one by one
+    # iter(event_queue.get, None) blocks until an event arrives, then passes it through
+    # stops if None is ever put in the queue (won't happen normally)
     # continues until game finishes, then returns to main.py for next game
+
     for event in iter(event_queue.get, None):
         if event["type"] == "gameState":
             # check if game has finished first before attemtping to process moves
@@ -230,11 +271,11 @@ def game_loop(client, game_id, my_colour):
                 return
 
             # PROCESS MOVE STUFF
-            # print only latest move from streamed game state:
+            # extract full moves list from the event
             moves = event["moves"]
 
             if moves:
-                # latest move string
+                # get latest move string
                 latest_move = moves.split()[-1]
 
                 # set origin/destination:
@@ -265,50 +306,24 @@ def game_loop(client, game_id, my_colour):
 
                 # check if my turn and listen to input moves (from hall sensor/CLI)
                 if is_my_turn(moves, my_colour):
-                    # STOP TIMER before asking for input
+                    # STOP TIMER before asking for input so it doesn't clash with input prompt (won't be issue when using physical sensors/timer)
                     if _clock_thread and _clock_thread.is_alive():
                         _stop_clock.set()
                         _clock_thread.join()
 
-                    # clear input queue and ask for input on CLI
+                    # discard stale moves from previous turn and start listening for input
                     move_handler.clear_queue()
                     move_handler.start_cli_input()
                     print("Enter move (e.g e2e4 format): ", end="", flush=True)
 
-                    # loop until a valid move is accepted
-                    while True:
-
-                        # 1 second break to check if game state has moved on or not ie. resign etc.
-                        my_move = move_handler.get_move(timeout=1)
-
-                        # no move yet - check if game state has moved on e.g new game etc.
-                        if my_move is None:
-                            # Check if a new game event arrived (resign, timeout, etc.)
-                            try:
-                                new_event = event_queue.get_nowait()
-                                event_queue.put(new_event)  # put it back for the outer loop to handle
-                                break  # exit input loop, outer loop will process it
-                            except queue.Empty:
-                                continue  # still our turn, keep waiting
-
-                        try:
-                            client.board.make_move(game_id, my_move)
-
-                            # move accepted, stop the timer and exit loop
-                            if _clock_thread and _clock_thread.is_alive():
-                                _stop_clock.set()
-                                _clock_thread.join()
-
-                            break  
-
-                        except Exception as e:
-                            print(f"Invalid move: {e}. Please try again.")
-                            # continue loop
+                    # run submit_my_move function
+                    # waits for a valid move and then submits to Lichess via api
+                    submit_my_move(client, game_id, move_handler, event_queue, _clock_thread, _stop_clock)
 
                 else:
                     pass
 
-                # TIMER STUFF
+                # start or restart countdown timer for appropriate player
                 _clock_thread, _stop_clock = start_stop_timer(
                     _clock_thread,
                     _stop_clock,
