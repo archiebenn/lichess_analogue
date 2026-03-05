@@ -224,6 +224,8 @@ def game_loop(client, game_id, my_colour):
     # timers - initialised as None until first move
     _clock_thread = None
     _stop_clock = None
+    # initialising game over
+    game_over = False
 
     # move input handler - handles CLI input and eventually hall sensor input from arduino
     move_handler = MoveInputHandler()
@@ -242,10 +244,19 @@ def game_loop(client, game_id, my_colour):
     # queue to hold incoming stream events so they don't block input loop
     event_queue = queue.Queue()
 
-    # runs in separate thread - pushes each streamed event into the queue
+    # runs in separate thread - pushes each streamed event into the queue in lichess stream
     def stream_to_queue():
-        for event in client.board.stream_game_state(game_id):
-            event_queue.put(event)
+        try:
+            for event in client.board.stream_game_state(game_id):
+                event_queue.put(event)
+
+        # if lichess stream drops for any reason catch it here
+        except Exception as e:
+            print(f"Game stream dropped: {e}")
+
+        # put streamDead no matter what killed the thread so main loop knows about it
+        finally:
+            event_queue.put({"type": "streamDead"})
 
     # start stream thread
     threading.Thread(target=stream_to_queue, daemon=True).start()
@@ -256,6 +267,19 @@ def game_loop(client, game_id, my_colour):
     # continues until game finishes, then returns to main.py for next game
 
     for event in iter(event_queue.get, None):
+
+        # is stream drops, wait 5 seconds and try connecting again
+        if event["type"] == "streamDead":
+            # stops attempt to reconnect to a game which doesn't exist
+            if game_over:
+                return
+            print("Reconnecting...")
+            time.sleep(5)
+            # if old thread died, start up new thread after waiting (to not overload api)
+            threading.Thread(target=stream_to_queue, daemon=True).start()
+            # skip back to top of loop to wait for next real event
+            continue
+
         if event["type"] == "gameState":
             # check if game has finished first before attemtping to process moves
             if event["status"] in finished_status:
@@ -266,6 +290,9 @@ def game_loop(client, game_id, my_colour):
 
                 # stop move input listener
                 move_handler.stop()
+
+                # set game_over True for streamDead handler (so it doesn't try to reconnect to finished game)
+                game_over = True
 
                 # return to main.py to wait for next game
                 return
