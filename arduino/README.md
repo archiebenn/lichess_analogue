@@ -10,8 +10,8 @@ Here's a simulation with a button used in place of the hall effect sensor. Press
 
 
 Magnet not present:  
-<img src="images/hall_off.jpg" width="250">  
+<img src="images/hall_off.jpg" width="500">  
 
 Magnet present:  
-<img src="images/hall_on.jpg" width="250">
+<img src="images/hall_on.jpg" width="500">
 
