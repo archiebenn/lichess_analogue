@@ -28,4 +28,8 @@ Below are some main areas I tested out before trying to implement into the full 
 Using a simple breadboard and arduino circuit I wired up the hall effect sensor to activate an LED and print to the CLI when a magnet is detected by the hall effect sensor.  
 A simulation on Wowki is available here (note a button is used in place of a hall effect sensor - pressing it mimics presence of a magnet): https://wokwi.com/projects/458314087442075649  
 
+## Photos 
+Here are some photos from during the prototyping/build of the lichess board:  
 
+<img src="images/file_led.jpg" width="350">
+Setting up the 8xLED strip to light up based on the opponent's move origin and destination file during a live game. Implemented as 3x orange flashes on origin file LED, and a constant green LED on the destination file LED as well as 3x all LED red flashes if the move is a check.   
