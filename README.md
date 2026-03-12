@@ -17,3 +17,16 @@ The aim is to create as discreet a board as possible so that it can be played li
 ### Pre-filled API token form:  
 This is to allow access via Lichess' API token to your games  
 https://lichess.org/account/oauth/token/create?scopes[]=challenge:write&scopes[]=puzzle:read&scopes[]=puzzle:write&scopes[]=board:play&description=Prefilled+token+example
+
+
+## Testing  
+As this was my first time carrying out an electronics project and using a pi/arduino/breadboard, it naturally involved a lot of testing. 
+
+Below are some main areas I tested out before trying to implement into the full system:  
+
+### Hall Effect Sensor  
+Using a simple breadboard and arduino circuit I wired up the hall effect sensor to activate an LED and print to the CLI when a magnet is detected by the hall effect sensor.  
+A simulation on Wowki is available here (note a button is used in place of a hall effect sensor - pressing it mimics presence of a magnet): https://wokwi.com/projects/458314087442075649  
+
+
+
