@@ -8,3 +8,4 @@ while True:
     line = ser.readline().decode('utf-8').strip()
     if line:
         print(line)
+        #
